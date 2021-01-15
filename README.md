@@ -1,1 +1,278 @@
-# ST406-Final-Project
+---
+title: |
+  | BAYESIAN vs FREQUENTIST LINEAR REGRESSION ANALYSIS OF METEOROLOGICAL DATA
+author: |
+  | Pruthuvi Kehelbedda
+  | Department of Statistics and Computer Science
+  | Faculty of Science
+  | University of Peradeniya
+  | Sri Lanka
+date: "1/15/2021"
+output: 
+  html_document:
+    toc: true
+---
+
+
+# Introduction
+
+ Bayesian Analysis, within the last decade more practitioner, especially in some fields such as medicine and psychology, are turning towards Bayesian analysis since almost everything can be interpreted straightforwardly with a probabilistic manner. However, Bayesian analysis has also some drawbacks, like a subjective way to define the priors (which plays an important role in Bayesian analysis, to find posterior), or the problems that do not have conjugate priors, and not always the mcmc algorithms converge easily to the right values when we use complex data.
+
+
+ In this article, we aim to do a Bayesian Regression Model fitting to predict a predictor variable in our data set. Which is important because it will lead to results which have been not studied before and to answer some major questions that have not been answered.
+ 
+ 
+When we discuss Bayesian analysis, frequentist statistic inference is a field that we can not ignore. There is a huge question is which statistical methodology is best, frequentist or Bayesian. In a frequentist model, it’s only using the data from the current experiment when evaluating outcomes. When we apply frequentist statistics we will likely use the term called “p-value”.
+
+
+The simple evaluation is the smaller the p-value, the more statistically significant our results. Also, p-value means the probability of a false positive based on the data in the experiment. Usually, it does not tell us two things. First, the probability of a specific event actually happening and the second is the probability of a variant is better than the control.
+
+
+In Bayesian statistics means  “Probability is an orderly opinion, and that inference from data is nothing other than the revision of such opinion in the light of relevant new information”. This believed by Thomas Bayes. The simple meaning is to get the prediction of the next experiment based on today results. So that why in this article we provide frequentist statistical modelling as well.
+
+
+# Methodology
+
+First, we discuss exploratory data analysis, and then we go for the frequentist linear regression modelling part and finally, we do Bayesian linear regression modelling for the data. And from this, we will get some knowledge that you've got solar energy batteries, and you want to know will it be reasonable to use them in the future. We will discuss these methodologies when we go further with the article. Now let’s discuss the data.
+
+
+
+## Description of Data
+
+![Hawaii Space Exploration Analog and Simulation](Figures/datafromhere.jpg){width=50%}
+
+The data set is meteorological data from the HI-SEAS (Hawaii Space Exploration Analog and Simulation) weather station from four months (September through December 2016) between Mission IV and Mission V from NASA. Our plan is to fit a prediction model using the knowledge of frequentist and Bayesian statistics. Meteorological data is facts that affect military operations such as wind direction, wind speed, air density and other phenomena.
+
+\vspace{.25cm}
+
+Table 1 shows data set is containing those features, and the data set is already cleaned no need any data pre-processing to do. Our model response variable will be Radiation in data set. 
+
+
+## Exploratory Data Analysis
+
+To understand the main characteristics of the data in the form of visual methods we use EDA (Exploratory Data Analysis). Here we mainly examine what the data can tell us beyond the formal modelling or hypothesis testing task. In our analysis, graphical techniques used for EDA.
+
+## Linear Regression Analysis
+
+A linear approach to modelling the relationship between a response and one or more explanatory variables (also known as dependent and independent variables). In LR, relationships are moded using a linear predictor function and that will estimate the unknown model parameters. Depending on the number of explanatory variables we use in the model classify LR to two types, as Simple Linear Regression and Multiple Linear Regression. Since our goal is prediction, Linear Regression can be used to fit a predictive model to our data in the form of frequentist statistical method.
+
+
+First, we fit a simple linear regression model to our data and validate the results and identify the best-fitted model. Then we fit a multiple linear regression model to identify the best multiple linear model.
+
+\vspace{.25cm}
+
+Consider our data is {${y_i, x_{i1}, x_{i2}, ..., x_{ip}}$} where $i=1,...,n$. Thus the model is in the form,
+
+$$y_i = \beta_0 + \beta_1x_{i1} + \beta_2x_{i2}+ ... + \beta_px_{ip} + \epsilon_i$$
+
+$$\Rightarrow y_i = x_i^{T}\beta + \epsilon_i \ ; where \ i = 1,2,...,n$$
+
+
+linear regression model assumes that the relationship between the dependent variable $y$ and the p-vector of regressors $x$ is linear. 
+
++ Assumption for the linear models never perfectly met,
++ But we must check if they are reasonable enough to work with.
++ Assumptions,
+  + 1. Y-values (or the error $e$) are independent.
+  + 2. Y-values (or the error $e$) are normally distributed.
+  + 3. Y-values can express by a linear function of X-variable.
+  + 4. Homoscedasticity: variation of observation around the regression line is constant.
+  
+  
+Based on these we fit a simple linear regression model in R using lm function. Then using forward selection we got the best simple linear regression model. Which done by based on the AIC (Akaike information criterion) value. And also evaluate the regression assumption by plotting the residual vs fitted, normal Q-Q plots. Similarly, we perform multiple linear regression. And choose the best-fitted model and clarify the assumptions.
+
+
+
+## Bayesian Regression Analysis
+
+$$\overbrace{p(\theta/D)}^{Posterior}=\frac{\overbrace{p(D/\theta)}^{Likelihood}.\overbrace{p(\theta)}^{Prior}}{\underbrace{p(D)}_{Evidence}}$$
+
+
+Above equation called Baye's rule When we know prior information about data from that we make current information more valuable, which is called Posterior.
+
+We have used two approaches to perform bayesian regression in R. Which are stan_glm and bas.lm. These are functions that in rstanarm and BAS packages respectively. The best fitted model is chooses by identifying minimum BIC value.
+
+Let's discuss about the prior. If we have the domain knowledge and the previous any guess about the model parameters, we can include these information in to our model. Unlike in frequentist, assume we about  every information on parameters comes from the data. If we do not have any information about prior, we can use normal distribution like non-informative priors to the model. 
+
+If we talk about the posterior, results The result of performing Bayesian Linear Regression is a distribution of possible model parameters based on the data and the prior.
+
+# Results and discussion
+
+## EDA
+
+First, let’s discuss the Exploratory part. In that, we tried to give a visual representation to the data. 
+
+![R Summary Description of Numerical data](Figures/summarydf.png){width=50%}
+
+We can see that Solar Radiation level is in a range of 1.11$kg/s^3$ to 1601.26$kg/s^3$. Also Temperature is in the range of 34$^\circ F$ to 71$^\circ F$. Pressure is almost similar within all the data points and Humidity is also having a range between 8% and 103%. We can see wind speed is oscillation between 0mph and 40.5mph.  
+
+Since our response variable is Radiation we will look at it.
+
+![Radiation by Time](Figures/radbytime.png){width=50%}
+
+We can see from the Figure 3 Radiation has a minimum $1.11 kg/s^3$ value and a maximum of $1601.26 kg/s^3$. Radiation got a bell shape curve with respec to Time variable. And Radiation got it's highest value when the date is 2016-09-04, time is 12:15:04 PM and at that time outer temperature is 61$^\circ F$, Humidity is 93%, Barometric Pressure is 30.47Hg, wind direction is clockwise from 3.56 degrees North, and wind speed is 9mph.
+
+![Box Plot of Daily Radiation level by Months](Figures/dailyradmonth.png){width=50%}
+
+Figure 4 explains the box plot of daily radiation level by each month. Each month median radiation levels are different. Median radiation is highest in October, and It’s increasing toward from September to October, but then it’s decreasing from October to December. The daily radiation level is getting lower from September to December. In September and December, we can see a similar high dispersion of daily radiation that in October and November. The range of daily radiation is high to low in September, December, October, and November respectively. 
+
+![Radiation in a Day time w.r.t each month](Figures/radsunsrmonth.png){width=50%}
+
+
+From Figure 5 we can get an idea about radiation level and how radiation behaves with respecting to months and day time.
+
+\newpage
+
+![Polar frequency plot of Wind direction & speed on week days](Figures/windirweekdys.png){width=50%}
+
+Figure 6 shows us how the Polar frequency plot of Wind direction & speed change in weekdays. Most of the time higher frequency wind is directed towards SE.
+
+### Correlation
+
+Our main purpose of the study is fitting a model to predict the radiation level. So to select variables who are really correlated with radiation we plot a correlation plot.
+
+![Correlation plot](Figures/ggpairs.png){width=50%}
+
+From the above figures we can see, high positive correlation between Radiation & Temperature. Pressure & Temperature has positive low correlation. Humidity with Radiation, Temperature, and Pressure and WindDirection with Radiation, Temperature, and Pressure and Speed with Humidity are all having a same negative lower correlation.
+
+## Regression Model
+
+We fitted a simple linear regression model. And depending on the AIC value we have chosen the best model as
+
+$$\hat{Radiation} = (-1706.2876) + (37.4421) * Temperature + \epsilon$$
+
+![Radiation vs Temperature](Figures/temvsrad.png){width=50%}
+
+![R Summary for the model](Figures/slmradtemp.png){width=50%}
+
+Above summary output gives us these results,
+
++ Looking at the residuals we can say it is do not appear to be strongly symmetrical.
++ From the coefficient estimates 1 $^\circ F$ increment of Temperature, will result 37.4421 $kg/s^3$(watts per meter squared) increment of Radiation.
++ Depending on the p-values we can say variables are statistically significant.
++ Temperature can explain 54.02% of the variation in Solar Radiation.
++ Considering finally F-stat and p-value, the model is significant.
+
+![Residual plots](Figures/simpllrm1.png){width=50%}
+
+For the above model almost the all assumptions are valid.
+
+Then we fit a multiple linear model for the data. Similar way we got the full model as the best model from minimum AIC value.
+
+![R Summary for the Full Model](Figures/lmfm.png){width=50%}
+
+
+In this outcome, it can be seen that the p-value of the F-statistic is < 2.2e-16, which is highly significant. This means that, at least, one of the predictor variables is significantly related to the outcome variable. It can be seen that, changing on Temperature, Pressure, Humidity, WindDirection, and WindSpeed variables are significantly associated to changes in Solar Radiation. For example, we can say depending on the summary detail that, 1 mph additional increment of wind speed leads to an increase of 7.875 $kg/s^3$ in solar radiation level. 1 $^\circ F$ additional increment of temperature leads to an increase of 38.37 $kg/s^3$ in solar radiation level. 1 Hg additional increment of barometric pressure leads to a decrease of 747.1 $kg/s^3$ in solar radiation level. 1% additional increment of humidity leads to a decrease of 0.2691 $kg/s^3$ in solar radiation level. 1 degree additional increment of wind direction leads to a decrease of 0.2694 $kg/s^3$ in solar radiation level. So the final full model is,
+
+\vspace{.25cm}
+
+$$\hat{Radiation}=(20980)+(38.37)*Temperature+(-747.1)*Pressure+$$
+$$ (-0.2691)*Humidity+ (-0.2694)*WindDir+(7.875)*WindSpeed+\epsilon$$
+
+
+
+![Residual Plots](Figures/lmfmfit.png){width=50%}
+
+Above Figure 12 will show us how the full model is validation regression assumptions.
+
+## Bayesian Regression Model
+
+### First Approach - stan_glm
+
+We use two approaches to build a Bayesian Regression model. First one is using the function stan_glm from the rstanarm package. In this function, we apply family as default use gaussian distribution, prior as default normal prior. If we need a flat uniform prior we put it to be NULL, and prior_intercept normal, student_t, or cauchy. Here also if we need a flat uniform prior we put it to be NULL.
+
+We start with the full model and the outcome gives us,
+
+![R Bayesian full model stan_glm output](Figures/stanglm.png){width=50%}
+
+From this output, we got median estimator as the median computed from the MCMC simulation. Also MAD_SD is median absolute deviation computed from the same simulation.
+
+![MCMC densities](Figures/alldensstan.png){width=50%}
+
+Point estimates of variables falls on the median of this distribution. Then we need to evaluate the model parameters.
+
+![R Description of Posterior Distributions](Figures/bmpostall.png){width=50%}
+
+In above description, Median is the Median estimator is the median computed from the MCMC simulation. 89% CI is a Credible Interval, used to quantify the uncertainty about the regression coefficients. With 89% probability (given the data) that a coefficient lies above the CI_low value and under CI_high value. pd is  Probability of Direction, which is the probability that the effect goes to the positive or to the negative direction, and it is considered as the best equivalent for the p-value. 89% ROPE gives Region of Practice Equivalence. Rhat is the scale reduction factor $\hat R$. ESS gives effective sample size.
+
+\vspace{.25cm}
+
+![MCMC density plots](Figures/medmeanmapest.png){width=50%}
+
+As we have seen from the above figure the values are closer to each other due to the like normality of the distribution of the posteriors where all the central statistics (mean, median, mode) are closer to each other. As expected they are approximately on top of each other. From these curves we can see the bell shape curves. That give us a hint that we used the prior's as Normal distribution.
+
+\vspace{.25cm}
+
+Finally We need to check the significance of Bayesian Regression coefficients. That is done by checking whether the corresponding credible interval contains zero or not, if no then this coefficient is significant. Now let's see significance of out model coefficients.
+
+\vspace{.25cm}
+
+![R HD intervals & ET intervals](Figures/hdieti.png){width=50%}
+
+\vspace{.25cm}
+
+From the both result we can see all the coefficients are significant.Note that we got the satisfied results duo to the normal prior assumption. But in real world  it is less often to be sure about the normality assumption.
+
+
+### Second Approach - BAS model
+
+We fit a model taking model prior as bernoulli and prior as BIC (Bayesian Information Criterion) in bas.lm function in BAS package. We got the results as follows.
+
+![R Marginal Posterior Summaries of Coefficients](Figures/baslmfms.png){width=50%}
+
+![BAS Coefficients plot](Figures/bascoeffplt.png){width=50%}
+
+
+![R Posterior Infromation about model](Figures/bstgmmao.png){width=50%}
+
+Looking at the summary table we have generated, we believe there is a 95% chance that the solar radiation increases by 37.97 to 38.78 $kg/s^3$ with one additional increase of the temperature. Similarly, there is a 95% chance that the solar radiation decreases by 702.18 to 791.96 with one additional increase of the Pressure. Again, there is a 95% chance that the solar radiation decreases by 0.17 to 0.36 with one additional increase of the wind direction.
+
+
+We start with the full model, with all possible predictors. i.e Temperature, Pressure, Humidity, WindDirection, Speed. We drop one variable at a time and record BIC value. Then finally choose the best model having minimum BIC value.
+
+
+ Model          | BIC value | BIC Difference from FM
+----------------|-----------|-----------------------
+FM              | 349029.7  | 0
+FM-Temperature  | 372607.2  | -23577.5
+FM-Pressure     | 350066.7  | -1037
+FM-Humidity     | 349050.1  | -20.4
+FM-WindDirection| 349357.3  | -327.6
+FM-Speed        | 349546.5  | -516.8
+
+
+![R Marginal posterior inclusion probability](Figures/bestmod.png){width=50%}
+
+We got the almost similar models and results from both approaches. Which is the full model.
+
+\newpage
+
+
+# Conclusion and recommendation
+
+The goal is to build a model that assists statisticians in describing, controlling, and predicting the dependent variable based on the independent variable(s). Here we have explored simple and multiple linear regression and Bayesian linear regression. Ultimately, it is up to the statistician to choose which method he or she prefers to use based on any prior knowledge of the data. As we describe earlier, we assume that our bayesian family as gaussian distribution and the prior as default normal prior. Neither method is "better" than the other, it all depends on the prior knowledge of the data and the decision of the statistician as to which method he or she uses. Somehow we have talk about the Bayesian vs Frequentist debate as well.
+
+The aim of Bayesian Linear Regression is not to find the single “best” value of the model parameters, but rather to determine the posterior distribution for the model parameters. The result of performing Bayesian Linear Regression is a distribution of possible model parameters based on the data and the prior. This allows us to quantify our uncertainty about the model: if we have fewer data points, the posterior distribution will be more spread out.
+
+The formulation of model parameters as distributions encapsulates the Bayesian worldview: we start out with an initial estimate, our prior, and as we gather more evidence, our model becomes less wrong. Bayesian reasoning is a natural extension of our intuition. Often, we have an initial hypothesis, and as we collect data that either supports or disproves our ideas, we change our model of the world (ideally this is how we would reason). For more further analysis we can use advanced tools like WinBugs.
+
+Finally we can represent few regression model based on the data set. Which are,
+
++ Simple Linear Regression
++ Multiple Linear Regression
++ Bayesian Linear Regression
+
+
+# Appendices
+
+This article is done using Rmarkdown bookdown. You can find the all R codes for the analysis using these links,
+
++ [Data describe and Exploratory Analysis](https://rpubs.com/pinkrpub/713490)
++ [Regression Model fitting 1](https://rpubs.com/pinkrpub/713493)
++ [Regression Model fitting 2](https://rpubs.com/pinkrpub/713503) 
+
+Also information about data and details can get from github repository.
+
++ [GitHub repository](https://github.com/pruthu-vi/ST406-Final-Project)
+
+
