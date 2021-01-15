@@ -364,7 +364,7 @@ This article is done using Rmarkdown bookdown. You can find the all R codes for 
 
 Also information about data and details can get from github repository.
 
-+ [GitHub repository]()
++ [GitHub repository](https://github.com/pruthu-vi/ST406-Final-Project)
 
 
 
