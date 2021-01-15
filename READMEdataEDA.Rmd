@@ -1,0 +1,266 @@
+---
+title: "ST406 - Project 2 Data, EDA"
+author: "P.I.N.Kehelbedda"
+date: "1/3/2021"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+    toc: true
+    number_sections: true
+    df_print: kable
+---
+
+```{r Libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library(readr) # read data
+library(ggplot2) # plot data
+library(dplyr) # data manipulation
+# library(tidyverse) # data manipulation 2.0
+library(stringr) # str manipulation
+library(GGally) # ggpairs
+library(openair) # plot wind data
+library(lubridate) # date, extract months, days
+library(gridExtra)
+library(Amelia)
+library(corrplot)
+library(ggfortify)
+library(RColorBrewer)
+library(forecast)
+```
+
+# Introduction
+
+# Data
+
+This data set is meteorological data from the HI-SEAS weather station from four months (September through December 2016) between Mission IV and Mission V.
+
+The data set contains such columns as: "wind direction", "wind speed", "humidity" and temperature. The response parameter that is to be predicted is: "Solar_radiation". It contains measurements for the past 4 months and you have to predict the level of solar radiation.
+Just imagine that you've got solar energy batteries and you want to know will it be reasonable to use them in future?.
+
+## Reading data
+
+```{r, message=FALSE}
+SolarRadPrediction <- read_csv("Data/SolarRadPrediction.csv", 
+    col_types = cols(Data = col_datetime(format = "%m/%d/%Y %H:%M:%S %p"), 
+        Time = col_time(format = "%H:%M:%S"), 
+        TimeSunRise = col_time(format = "%H:%M:%S"), 
+        TimeSunSet = col_time(format = "%H:%M:%S")))
+
+colnames(SolarRadPrediction)[8] <- "WindDirection"
+dim(SolarRadPrediction)
+str(SolarRadPrediction)
+head(SolarRadPrediction)
+```
+
+## About data
+
+Data set contains these variables,
+
++ UNIXTIME: Unix form of time variable.
++ Data: Date in format of yyyy-mm-dd
++ Time: The local time in the format of hh:mm:ss 24-hr.
++ Radiation: Solar radiation in watts per meter squared ($1kg/s^3$).
++ Temperature: Temperature in degrees fahrenheit ($^\circ F$).
++ Pressure: Barometric Pressure in $Hg$.
++ Humidity: Humidity precent.
++ WindDirection: Wind derection in degrees.
++ Speed: Wind speed in miles per hour (mph).
++ TimeSunRise: Hawaii time of Sun rise.
++ TimeSunSet: Hawaii time of Sun set.
+
+I'm assuming that the location is Hawaii. Furthermore, the wind direction is measured clockwise from 0 degrees North.
+
+## Data Pre-Processing
+
+### Missing values
+
+
+
+```{r}
+mean(is.na(SolarRadPrediction))
+```
+
+There is no missing values. Data is 100% cleaned.
+
+
+### Dates
+
+
+# EDA
+
+## Data
+
+```{r}
+df <- SolarRadPrediction[, -1]
+colnames(df)[1] <- "Date"
+colnames(df)[8] <- "WindSpeed"
+```
+
+
+## Dependent variable Radiation
+
+### Radiation
+
+#### Tables
+
+```{r}
+summary(df$Radiation)
+
+## Radiation highest value when time ?
+df %>%
+  filter(Radiation == max(Radiation))
+## Min radiation
+df %>%
+  filter(Radiation == min(Radiation))
+```
+
+#### Figures
+
+```{r}
+ggplot(data = df, aes(x = Time, y = Radiation)) +
+  geom_line(col = "blue") + labs(title = "Radiation by Time")
+```
+
+## Handle Date variable
+
+```{r}
+# GetMonths 
+m <- month(df$Date)
+table(m)
+# Get dates
+d <- day(df$Date)
+```
+
+
+## Additional Tables
+
+```{r}
+summary(df[, c(3,4,5,6,8)])
+```
+
+
+## Additional Figures
+
+```{r}
+# Plotting wind speed and wind direction over time
+df1 <- df %>%
+  select(ws = WindSpeed, wd = WindDirection, date = Date)
+## weekdays wind
+polarFreq(mydata = df1, cols = "jet")
+polarFreq(mydata = df1, cols = "jet", type = "weekday")
+## weekdays * season wind
+# polarFreq(mydata = df1, cols = "jet", type = c("weekday", "season"))
+
+#Correlations
+#numData <- df[, -c(1,2,9,10)]
+#ggpairs(numData)
+```
+
+
+```{r}
+dfd <- df # new data frame since no need to change df
+
+month <- month(df$Date)
+day <- day(df$Date)
+
+ggplot(dfd, aes(factor(month), Radiation)) + 
+  geom_boxplot(aes(fill = factor(month))) +
+  ggtitle("Boxplot of Radiation values for each month") +
+  scale_x_discrete(labels = c("September", "Octomber", "November", "December")) +
+  scale_fill_discrete(name = "Months", 
+                      labels = c("September", "Octomber", "November", "December")) +
+  xlab("Month")
+```
+
+```{r functions}
+# df <- SolarRadPrediction
+# # any(is.na(df))
+# 
+# getDate<-function(x,pos1,pos2){
+#   if(pos1==1){
+#     val<-as.numeric(strsplit(strsplit(as.character(x)," ")[[1]][pos1],'/')[[1]][pos2])
+#   }
+#   else if(pos1==3 & pos2==0){
+#     val<-as.factor(strsplit(strsplit(as.character(x)," ")[[1]][pos1],'/')[[1]])
+#   }
+#   return(val)
+# }
+# 
+# getTIME<-function(x,pos){
+#   val<-strsplit(as.character(x),":")[[1]][pos]
+#   return(as.numeric(val))
+# }
+```
+
+
+```{r}
+# df$Month <- sapply(df$Data, getDate,1,1)
+# df$Day <- sapply(df$Data,getDate,1,2)
+# df$Year <- sapply(df$Data,getDate,1,3)
+# df$TimeAbbr <- sapply(df$Data,getDate,3,0)
+# df$hour <- sapply(df$Time,getTIME,1)
+# df$minute <- sapply(df$Time,getTIME,2)
+# df$sec <- sapply(df$Time,getTIME,3)
+```
+
+
+
+```{r}
+# mymonths <- c("January","February",
+#               "March","April","May","June","July",
+#               "August","September","October","November","December")
+# 
+# df$MonthAbb <- mymonths[ df$Month ]
+# df$ordered_month <- factor(df$MonthAbb, levels = month.name)
+# 
+# df$DateTs<-as.POSIXct(paste0(df$Year,'-',
+#                              df$Month,'-',
+#                              df$Day,' ',
+#                              as.character(df$Time)),
+#                       format="%Y-%m-%d %H:%M:%S")
+# 
+# df$DailyTs <- as.POSIXct(as.character(df$Time), format="%H:%M:%S")
+# 
+# df$DiffTime<-as.numeric(difftime(as.POSIXct(paste0(df$Year,
+#                                                    '-',df$Month,
+#                                                    '-',df$Day,' ',
+#                                                    as.character(df$TimeSunSet)), 
+#                                             format="%Y-%m-%d %H:%M:%S"),
+#   
+#                                  as.POSIXct(paste0(df$Year,'-',
+#                                                    df$Month,'-',
+#                                                    df$Day,' ',
+#                                                    as.character(df$TimeSunRise)), 
+#                                             format="%Y-%m-%d %H:%M:%S"),
+#                                  units='sec'))
+```
+
+
+
+```{r}
+# plot
+# ggplot(data=df,aes(x=Radiation,fill=ordered_month)) + 
+#   geom_histogram(bins=100) + 
+#   scale_y_log10() + 
+#   scale_fill_manual(name="",values=rainbow(4)) + 
+#   theme(legend.position='top') + 
+#   facet_wrap(~ordered_month) +
+#   xlab('Radiation level [W/m^-2]') + ylab('Count')
+# 
+# # plot
+# ggplot(data=df,aes(x=DiffTime,y=Radiation)) + 
+#   geom_point(aes(color=ordered_month)) +
+#   scale_color_manual(name="",values=rainbow(4)) + 
+#   theme(legend.position='top') + xlab("SunSet -SunRise [sec]")
+# 
+# # plot
+# df %>% select(ordered_month,Day,Radiation) %>% 
+#   group_by(ordered_month,Day) %>% 
+#   summarise(dailyRad = mean(Radiation)) %>% 
+#   ggplot(aes(x=ordered_month,y=dailyRad,color=dailyRad)) + 
+#   scale_color_gradientn(colours=rev(brewer.pal(10,'Spectral'))) + 
+#   geom_boxplot(colour='black',size=.4,alpha=.5) + 
+#   geom_jitter(shape=16,width=.2,size=2) +
+#   xlab('') + ylab('') + theme(legend.position='top')
+```
+

@@ -1,0 +1,255 @@
+---
+title: "ST406 - Bayesian LRM"
+author: "P.I.N.Kehelbedda"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+    toc: true
+    number_sections: true
+    df_print: kable
+---
+
+
+```{r libraries, echo=FALSE, message=FALSE}
+library(readr) # read data
+library(dplyr) # data manipulation
+library(rstanarm) # bayesin model
+library(bayestestR) # Bayes test
+library(insight) # Bayes test part
+library(broom) # 
+library(bayesplot) # bayes plot
+library(ggpubr) # multiple plots
+library(ggplot2)
+library(psych) # describe
+```
+
+# Baye's Theorem
+
+$$\overbrace{p(\theta/D)}^{Posterior}=\frac{\overbrace{p(D/\theta)}^{Likelihood}.\overbrace{p(\theta)}^{Prior}}{\underbrace{p(D)}_{Evidence}}$$
+
+
+# Data
+
+```{r}
+SolarRadPrediction <- read_csv("Data/SolarRadPrediction.csv", 
+    col_types = cols(Data = col_datetime(format = "%m/%d/%Y %H:%M:%S %p"), 
+        Time = col_time(format = "%H:%M:%S"), 
+        TimeSunRise = col_time(format = "%H:%M:%S"), 
+        TimeSunSet = col_time(format = "%H:%M:%S")))
+
+df <- SolarRadPrediction[, -1]
+colnames(df)[1] <- "Date"
+colnames(df)[7] <- "WindDirection"
+colnames(df)[8] <- "WindSpeed"
+
+## Select numerical data for only model fitting part
+df1 <- df %>%
+  select(Radiation, Temperature, Pressure, Humidity, WindDirection, WindSpeed)
+#summary(df1)
+describe(df1)
+#str(df1)
+```
+
++ Looking at from the summary data we can see that there is no missing value problem for the data set.
+
+
+# Model Fitting
+
++ From our data we are going to fit a model to predict Radiation. So we take Radiation as out dependent variable and others as independent variables.
+
+
+## Linear Regression Model
+
+```{r}
+#pairs(df1)
+model_freq <- lm(Radiation ~ ., data = df1)
+summary(model_freq)
+tidy(model_freq)
+```
+
++ From the model summary we can see all the regressors are significant (by p-value).
+
+### Model Selection
+
+```{r}
+step(lm(Radiation ~ 1, data = df1), 
+     direction = "forward", 
+     scope = ~ Temperature+Pressure+Humidity+WindDirection+WindSpeed)
+```
+
++ From the model selection choose the lowest AIC value model. So the full model is the best model.
+
+### Linear Regression Assumption check ?
+
+```{r}
+par(mfrow = c(2, 2))
+plot(model_freq)
+```
+
++ From above fitted plots we can convence that the full model has satisfied the assumptions.
+
+
+## Bayesian Regression
+
++ Here we use the function *stan_glm* from the **rstanarm** package.
++ In this function,
+  + family: default use **gaussian** distribution.
+  + prior: default **normal prior** is used. If we need a flat **uniform prior** we put it to be NULL.
+  + prior_intercept: can be **normal, student_t, or cauchy**. Here also if we need a flat **uniform prior** we put it to be NULL.
+
+```{r}
+# Fitting bayesian model & remember 1234
+bayesian_model <- stan_glm(Radiation ~ ., data = df1, seed = 1234) 
+```
+
+```{r}
+#summary(bayesian_model)
+print(bayesian_model, digits = 3)
+# library(stargazer)
+# stargazer(bayesian_model, type = "text")
+```
+
++ From this output, Median estimator is the median computed from the MCMC simulation.
++ Also MAD_SD is median absolute deviation computed from the same simulation.
++ To know more we plot bayesian plots.
+
+
+```{r}
+# Temperature
+p1 <- mcmc_dens(x = bayesian_model, pars = c("Temperature")) +
+  vline_at(v = 38.373, col = "red")
+# Pressure
+p2 <- mcmc_dens(x = bayesian_model, pars = c("Pressure")) +
+  vline_at(v = -747.457, col = "red")
+# Humidity
+p3 <- mcmc_dens(x = bayesian_model, pars = c("Humidity")) +
+  vline_at(v = -0.269, col = "red")
+# WindDirection
+p4 <- mcmc_dens(x = bayesian_model, pars = c("WindDirection")) +
+  vline_at(v = -0.270, col = "red")
+# WindSpeed
+p5 <- mcmc_dens(x = bayesian_model, pars = c("WindSpeed")) +
+  vline_at(v = 7.863, col = "red")
+
+ggarrange(p1,p2,p3,p4,p5)
+```
+
++ Point estimates of variables falls on the median of this distribution. 
+
+
+### Evaluate Model Parameter
+
+```{r}
+describe_posterior(bayesian_model)
+```
+
++ In above description,
+  + Median: Median estimator is the median computed from the MCMC simulation.
+  + 89% CI: Creadible Interval, used to quantify the uncertainty about the regression coefficients. with 89% probability (given the data) that a coefficient lies above the CI_low value and under CI_high value.
+  + pd: Probability of Direction, which is the probability that the effect goes to the positive or to the negative direction, and it is considered as the best equivalent for the p-value.
+  + 89% ROPE: Region of Practice Equavilance.
+  + Rhat: scale reduction factor $\hat R$. 
+  + ESS: effective sample size.
+  
+```{r}
+poster <- get_parameters(bayesian_model)
+print(purrr::map_dbl(poster,median),digits = 3)
+print(purrr::map_dbl(poster, map_estimate),digits = 3)
+print(purrr::map_dbl(poster, mean),digits = 3)
+```
+
++ As we see the values are closer to each other due to the like normality of the distribution of the posteriors where all the central statistics (mean, median, mode) are closer to each other.
+
+```{r}
+p1 <- mcmc_dens(bayesian_model, pars=c("Temperature"))+
+  vline_at(median(poster$Temperature), col="red")+
+  vline_at(mean(poster$Temperature), col="yellow")+
+  vline_at(map_estimate(poster$Temperature), col="green")
+
+p2 <- mcmc_dens(bayesian_model, pars=c("Pressure"))+
+  vline_at(median(poster$Pressure), col="red")+
+  vline_at(mean(poster$Pressure), col="yellow")+
+  vline_at(map_estimate(poster$Pressure), col="green")
+
+p3 <- mcmc_dens(bayesian_model, pars=c("Humidity"))+
+  vline_at(median(poster$Humidity), col="red")+
+  vline_at(mean(poster$Humidity), col="yellow")+
+  vline_at(map_estimate(poster$Humidity), col="green")
+
+p4 <- mcmc_dens(bayesian_model, pars=c("WindDirection"))+
+  vline_at(median(poster$WindDirection), col="red")+
+  vline_at(mean(poster$WindDirection), col="yellow")+
+  vline_at(map_estimate(poster$WindDirection), col="green")
+
+p5 <- mcmc_dens(bayesian_model, pars=c("WindSpeed"))+
+  vline_at(median(poster$WindSpeed), col="red")+
+  vline_at(mean(poster$WindSpeed), col="yellow")+
+  vline_at(map_estimate(poster$WindSpeed), col="green")
+
+ggarrange(p1,p2,p3,p4,p5)
+```
+
++ As expected they are approximately on top of each other.
+
+## Bayesian Inferences
+
++ We need to check the significance of Bayesian Regression coefficients.
++ That is done by **checking whether the corresponding credible interval contains zero or not, if no then this coefficient is significant**.
++ Now let's see significance of out model coefficients.
+
+```{r}
+hdi(bayesian_model)
+eti(bayesian_model)
+```
+
++ From the both result we can see all the coefficients are significant.
++ <span style="color: red;">NOTE:</span> We got the satisfied results duo to the normal prior assumption. But in real world  it is less often to be sure about the normality assumption.
+
+
++ Another way of testing significance is it is less often to be sure about the normality assumption.
+
+```{r}
+rope(poster$Temperature)
+rope(poster$Pressure)
+rope(poster$Humidity)
+rope(poster$WindDirection)
+rope(poster$WindSpeed)
+rope(poster$`(Intercept)`)
+
+rope_range(bayesian_model)
+```
+
++ For all the variables including intercept, almost all the credible interval (HDI) is outside the ROPE range, which means that coefficient is highly significant.
+
+
+## PD and P-value
+
++ Interest in checking the direction of the coefficient.
++ This done using pd statistic.
++ If the pd is high value means that the associated effect is concentrated on the same side as the median.
++ In our model almost all the posteriors are on same side.
+
+```{r}
+df2 <- select(tidy(model_freq), c(term,p.value))
+df2$p.value <- round(df2$p.value, digits = 3)
+df3 <- 1 - purrr::map_dbl(poster, p_direction)
+df4 <- cbind(df2,df3)
+df4
+```
+
+
+
+
+
+# Questions I got ???
+
++ When we fitting the bayesian model, how we put prior, family detail.
+  + i.e. How we know about the family, prior details.
+
+
+
+
+
+

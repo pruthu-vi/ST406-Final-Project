@@ -1,0 +1,370 @@
+---
+title: "ST406 - Project 2 Model fitting"
+author: "P.I.N.Kehelbedda"
+date: "1/3/2021"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: github
+    toc: true
+    number_sections: true
+    df_print: kable
+---
+
+```{r Libraries, echo=FALSE, warning=FALSE, message=FALSE}
+library(readr) # read data
+library(corrplot) #cor plot
+library(ggplot2)
+library(GGally) # ggpairs
+library(psych) # describe
+library(dplyr) # SQLs
+library(gridExtra) # Grid view plots
+library(BAS) # bayes regression
+```
+
+
+# Model Fitting
+
+## Data
+
+```{r, message=FALSE}
+SolarRadPrediction <- read_csv("Data/SolarRadPrediction.csv")
+colnames(SolarRadPrediction)[8] <- "WindDirection"
+numData <- SolarRadPrediction[, -c(1,2,3,10,11)]
+head(numData)
+describe(numData)
+attach(numData)
+```
+
+
+## Correlation
+
+```{r, message=FALSE, warning=FALSE}
+m <- cor(numData)
+m_round <- round(m, digits = 4)
+corrplot(corr = m_round, method = "number")
+corrplot(corr = m_round, method = "circle")
+
+#ggpairs(numData, 
+#        lower = list(continuous = wrap("smooth", alpha = 0.05, size=0.1)))
+```
+
++ We can see high positive correlation between **Radiation & Temperature**.
++ **Pressure & Temperature** has positive low correlation.
++ **Humidity with Radiation, Temperature, and Pressure** and **WindDirection with Radiation, Temperature, and Pressure** and **Speed with Humidity** are all having a same negative lower correlation.
+
+## Simple Linear Regression 
+
+### Model 1
+
+```{r, message=FALSE, warning=FALSE}
+fit <- lm(formula = Radiation ~ Temperature, data = numData)
+summary(fit)
+
+par(mfrow = c(2,2))
+plot(fit)
+
+ggplot(data = numData, aes(x = Temperature, y = Radiation)) + 
+  geom_point(color="blue", alpha=0.35, size=2) +
+  geom_smooth(method=lm, color="red")
+  #geom_abline(intercept = coef(fit)[1], slope = coef(fit)[2])
+```
+
+### Model 2
+
+```{r, message=FALSE, warning=FALSE}
+fit <- lm(formula = Radiation ~ Pressure, data = numData)
+summary(fit)
+
+par(mfrow = c(2,2))
+plot(fit)
+
+ggplot(data = numData, aes(x = Pressure, y = Radiation)) + 
+  geom_point(color="blue", alpha=0.35, size=2) +
+  geom_smooth(method=lm, color="red")
+```
+
+### Model 3
+
+```{r, message=FALSE, warning=FALSE}
+fit <- lm(formula = Radiation ~ Humidity, data = numData)
+summary(fit)
+
+par(mfrow = c(2,2))
+plot(fit)
+
+ggplot(data = numData, aes(x = Humidity, y = Radiation)) + 
+  geom_point(color="blue", alpha=0.35, size=2) +
+  geom_smooth(method=lm, color="red")
+```
+
+### Model 4
+
+```{r, message=FALSE, warning=FALSE}
+fit <- lm(formula = Radiation ~ WindDirection, data = numData)
+summary(fit)
+
+par(mfrow = c(2,2))
+plot(fit)
+
+ggplot(data = numData, aes(x = WindDirection, y = Radiation)) + 
+  geom_point(color="blue", alpha=0.35, size=2) +
+  geom_smooth(method=lm, color="red")
+```
+
+### Model 5
+
+```{r, message=FALSE, warning=FALSE}
+fit <- lm(formula = Radiation ~ Speed, data = numData)
+summary(fit)
+
+par(mfrow = c(2,2))
+plot(fit)
+
+ggplot(data = numData, aes(x = Speed, y = Radiation)) + 
+  geom_point(color="blue", alpha=0.35, size=2) +
+  geom_smooth(method=lm, color="red")
+```
+
+So the final conclution for the Simple Linear model is first model, that is 
+
+$$\hat{Y} = \beta_0 + \beta_1x_1 + \epsilon$$
+
+$$\hat{Radiation} = (-1706.2876) + (37.4421) * Temperature + \epsilon$$
+
+Which gives,
+
+ R-sq  | R-sq(adj)
+-------|----------
+ 0.5402| 0.5401
+
+
+#### What does the final model describe
+
+```{r}
+fit <- lm(formula = Radiation ~ Temperature, data = numData)
+summary(fit)
+```
+
++ 1. Residuals: We look for a symmetrical distribution(Median close to 0, Min, Max has same distance from 0(Min & Max and 1Q & 3Q should have close in magnitude)). Here do not appear to be strongly symmetrical.
++ 2. Coefficients:
+  + Estimate: Predicting the response variable. For a example $1^\circ F$ increment of Temperature, will result $37.4421 kg/s^3$(watts per meter squared) increment of Radiation.
+  + Std.Error: Average amount that the estimate varies from the actual value.(relatively low number than the estimates).
+  + t-value: $\frac{Estimate}{Std.error}$
+  + p-values: Want $p-value < \alpha=0.05$ to be statistically significant.
++ R-sq: x variable can explain R-sq% of the variation in y-variable.
++ R-sq(adj): Scaled by the number of the parameters in the model.
++ F-stat, p-val: Tells us that R-sq is significant or not.
+
+
+#### Regression Assumptions
+
++ Assumption for the linear models never perfectly met,
++ But we must check if they are reasonable enough to work with.
++ Assumptions,
+  + 1. Y-values (or the error $e$) are independent.
+  + 2. Y-values (or the error $e$) are normally distributed.
+  + 3. Y-values can express by a linear function of X-variable.
+  + 4. Homoscedasticity: variation of observation around the regression line is constant.
+
+```{r}
+fit <- lm(formula = Radiation ~ Temperature, data = numData)
+plot(Radiation ~ Temperature)
+abline(fit, col = "red", lwd = 2)
+par(mfrow = c(2,2))
+plot(fit)
+```
+
++ Residual Plot: Should be no pattern, red line should be flat.
++ Normal QQ: Should follow a roughly a diagonal line.
++ Scale-Location: Shows increasing and decreasing diagnose.
+
+## Bayesian Simple Regression
+
+### Calculations
+
+```{r}
+# Obtain residuals and n
+resd <- residuals(fit)
+n <- length(resd)
+# Calculate MSE
+MSE <- sum((resd^2))/(n-2)
+MSE
+```
+
+```{r}
+# Model
+fit <- lm(formula = Radiation ~ Temperature, data = numData)
+# Credible interval 
+output <- summary(fit)$coef[, 1:2]
+#output
+
+out <- cbind(output, confint(fit))
+colnames(out) <- c("Posterior Mean", "Posterior Std", "2.5", "97.5")
+round(out, 2)
+```
+
++ Let's discuss about above bayesian outcome.
++ Interpretation: Based on the information we can say that there is a 95% chance that Radiation will increase $37.07 kg/s^3$ up to $37.82 kg/s^3$ with every additional $1^\circ F$ increase in the Temperature.
+
+
+## Multiple Linear Regression
+
+### Model 1
+
++ Having all the variables to the model.
+
+```{r}
+fit <- lm(formula = Radiation ~ ., data = numData)
+summary(fit)
+
+par(mfrow = c(2,2))
+plot(fit)
+```
+
+### Model 2
+
++ By looking at the correlations we remove least correlation having with Radiation. Which is Speed.
+
+```{r}
+fit <- lm(formula = Radiation ~ Temperature+Pressure+Humidity+WindDirection,
+          data = numData)
+summary(fit)
+```
+
+
+### Model 3
+
++ Remove pressure.
+
+```{r}
+fit <- lm(formula = Radiation ~ Temperature+Humidity+WindDirection,
+          data = numData)
+summary(fit)
+```
+
++ We can see only all variable including gives us higher R-sq value
+
+
+## Bayesian Multiple Linear Regression
+
+```{r}
+# Bayesian Multiple Model fitting
+bas.lmall = bas.lm(Radiation ~ ., data = numData,
+                 prior = "BIC",
+                 modelprior = Bernoulli(1),
+                 include.always = ~ .,
+                 n.models = 1)
+# Coefficients
+lmall.coef <- coef(bas.lmall)
+lmall.coef
+
+# Coefficients visualization
+par(mfrow = c(2, 3)) 
+plot(lmall.coef, ask = F)
+```
+
+```{r}
+# Summary table
+out = confint(lmall.coef)[, 1:2]
+# Extract the upper and lower bounds of the credible intervals 
+names = c("posterior mean", "posterior std", colnames(out)) 
+out = cbind(lmall.coef$postmean, lmall.coef$postsd, out) 
+colnames(out) = names
+
+round(out, 2)
+```
+
+### Model selection
+
++ We start with the full model, with all possible predictors. 
+  + i.e Temperature, Pressure, Humidity, WindDirection, Speed.
++ We drop one variable at a time and record BIC value.
++ Then finally choose the best model having minimum BIC value.
+
+```{r}
+# Total # of observation
+n <- nrow(numData)
+
+# Full Model
+rad.lm1 <- lm(Radiation ~ ., data = numData)
+rad.step <- step(rad.lm1, k = log(n))
+
+# Let's drop each variable and test
+## Tried, Speed,Pressure,WindDirection,Humidity,
+rad.lmt <- lm(Radiation ~ Temperature+Pressure+Humidity+WindDirection,
+              data = numData)
+rad.step <- step(rad.lmt, k = log(n))
+
+### Table
+```
+
+ Model          | BIC value | BIC Difference from FM
+----------------|-----------|-----------------------
+FM              | 349029.7  | 0
+FM-Temperature  | 372607.2  | -23577.5
+FM-Pressure     | 350066.7  | -1037
+FM-Humidity     | 349050.1  | -20.4
+FM-WindDirection| 349357.3  | -327.6
+FM-Speed        | 349546.5  | -516.8
+
+
++ Tried removing each less correlated variable, but we got the minimum BIC on Full Model.
+
+#### BAS to get best model
+
+```{r}
+# Model
+bas_model <- bas.lm(Radiation ~ ., data = numData,
+                    prior = "BIC",
+                    modelprior = uniform()) # equal prior to the model
+#bas_model
+bas_coef <- coef(bas_model)
+bas_coef
+
+# Best model
+best <- which.max(bas_model$logmarg)
+bestmodel <- bas_model$which[[best]]
+#bestmodel
+
+bestgamma <- rep(0, bas_model$n.vars)
+bestgamma[bestmodel + 1] <- 1
+#bestgamma
+
+bas_bestmodel <- bas.lm(Radiation ~ ., data = numData,
+                    prior = "BIC", n.models = 1, bestmodel = bestgamma,
+                    modelprior = uniform())
+## Coefficients
+bas_coef <- coef(bas_bestmodel)
+## creadible intervals
+out <- confint(bas_coef)[, 1:2]
+
+## Summary table
+bas_summary <- cbind(bas_coef$postmean, bas_coef$postsd, out)
+names <- c("Posterior Mean", "Posterior SD", colnames(out))
+colnames(bas_summary) <- names
+bas_summary
+```
+
+```{r}
+## Get posterior probability
+bas_model <- bas.lm(Radiation ~ Temperature+Pressure+Humidity+WindDirection+Speed, 
+                    data = numData,
+                    prior = "BIC",
+                    modelprior = uniform())
+
+round(summary(bas_model), 3)
+
+## Marginal posterior inclusion probability
+print(bas_model)
+```
+
+
+# Interpritation
+
+
+# Questions that I had.... have :)
+
++ Standardization, Normalization is necessary in Regression modeling ?.
++ How to set prior information to a model.
+
